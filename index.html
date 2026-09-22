@@ -1,1035 +1,264 @@
 <!DOCTYPE html>
-<html lang="zh-TW" class="h-full">
+<html lang="zh-TW">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>LectureScribe AI - 聽講即時筆記與智慧摘要助理</title>
-  <!-- Tailwind CSS -->
+  <title>現場演講記錄員 (LectureScribe AI)</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Google Fonts & Font Awesome Icons -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  
-  <script>
-    tailwind.config = {
-      darkMode: 'class',
-      theme: {
-        extend: {
-          fontFamily: {
-            sans: ['"Noto Sans TC"', '"Plus Jakarta Sans"', 'sans-serif'],
-          },
-          colors: {
-            primary: {
-              50: '#eef2ff',
-              100: '#e0e7ff',
-              500: '#6366f1',
-              600: '#4f46e5',
-              700: '#4338ca',
-            },
-            accent: {
-              teal: '#0d9488',
-              amber: '#d97706',
-              rose: '#e11d48'
-            }
-          }
-        }
-      }
-    }
-  </script>
   <style>
-    /* Custom scrollbars */
-    ::-webkit-scrollbar {
-      width: 6px;
-      height: 6px;
+    .pulse-ring {
+      animation: pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
     }
-    ::-webkit-scrollbar-track {
-      background: rgba(0,0,0,0.03);
-    }
-    ::-webkit-scrollbar-thumb {
-      background: rgba(148, 163, 184, 0.5);
-      border-radius: 9999px;
-    }
-    ::-webkit-scrollbar-thumb:hover {
-      background: rgba(100, 116, 139, 0.8);
-    }
-    .wave-bar {
-      transition: height 0.15s ease;
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: .5; transform: scale(1.08); }
     }
   </style>
 </head>
-<body class="bg-slate-50 text-slate-800 dark:bg-slate-900 dark:text-slate-100 min-h-full flex flex-col font-sans antialiased transition-colors duration-200">
-
-  <!-- Top Navigation Bar -->
-  <header class="sticky top-0 z-30 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 px-4 lg:px-8 py-3 flex items-center justify-between shadow-sm">
-    <div class="flex items-center space-x-3">
-      <div class="h-10 w-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center text-white shadow-md shadow-indigo-500/20">
-        <i class="fa-solid fa-microphone-lines text-lg"></i>
-      </div>
-      <div>
-        <div class="flex items-center space-x-2">
-          <h1 class="font-bold text-lg text-slate-800 dark:text-white leading-tight">LectureScribe AI</h1>
-          <span class="text-xs px-2 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 font-semibold border border-indigo-200 dark:border-indigo-800">演講即時轉譯</span>
-        </div>
-        <p class="text-xs text-slate-500 dark:text-slate-400 hidden sm:block">聽講即時語音辨識・關鍵標記・智慧架構摘要助理</p>
-      </div>
+<body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col font-sans">
+  <header class="bg-slate-800 border-b border-slate-700 px-4 py-3 flex items-center justify-between sticky top-0 z-50">
+    <div class="flex items-center space-x-2">
+      <i class="fa-solid fa-microphone-lines text-emerald-400 text-xl"></i>
+      <h1 class="text-lg font-bold">現場演講記錄員</h1>
     </div>
-
-    <!-- Quick action controls -->
-    <div class="flex items-center space-x-2 sm:space-x-3">
-      <!-- Recognition Language Selector -->
-      <select id="langSelect" class="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs sm:text-sm font-medium rounded-lg px-2.5 py-1.5 border border-slate-300 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500">
-        <option value="zh-TW" selected>繁體中文 (台灣)</option>
-        <option value="en-US">English (US)</option>
-        <option value="ja-JP">日本語</option>
-      </select>
-
-      <!-- Gemini Settings Trigger -->
-      <button id="openApiModalBtn" class="flex items-center space-x-1 px-3 py-1.5 text-xs sm:text-sm font-medium rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition border border-slate-200 dark:border-slate-700">
-        <i class="fa-solid fa-sliders text-indigo-500"></i>
-        <span class="hidden md:inline">Gemini 設定</span>
-      </button>
-
-      <!-- Dark Mode Toggle -->
-      <button id="themeToggleBtn" class="p-2 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition" title="切換深淺模式">
-        <i class="fa-regular fa-moon text-lg dark:hidden"></i>
-        <i class="fa-regular fa-sun text-lg hidden dark:inline"></i>
-      </button>
-
-      <!-- Clear session -->
-      <button id="resetBtn" class="p-2 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition" title="清空講義記錄">
-        <i class="fa-regular fa-trash-can text-lg"></i>
-      </button>
+    <div id="micStatus" class="text-xs px-2 py-1 rounded bg-slate-700 text-slate-300">
+      待命
     </div>
   </header>
 
-  <!-- Gemini API Key Settings Modal -->
-  <div id="apiModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
-    <div class="bg-white dark:bg-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-700 transition transform scale-100">
-      <div class="flex items-center justify-between mb-4">
-        <div class="flex items-center space-x-2">
-          <i class="fa-solid fa-brain text-indigo-500 text-xl"></i>
-          <h3 class="font-bold text-lg text-slate-900 dark:text-white">AI 摘要模型配置</h3>
-        </div>
-        <button id="closeApiModalBtn" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
-          <i class="fa-solid fa-xmark text-lg"></i>
+  <main class="flex-1 max-w-2xl w-full mx-auto p-4 flex flex-col gap-4">
+    <!-- 收音狀態與即時音量回饋卡片 -->
+    <div class="bg-slate-800 rounded-xl p-4 border border-slate-700 shadow-sm flex flex-col gap-3">
+      <div class="flex items-center justify-between">
+        <span class="text-sm text-slate-300 font-medium">現場收音監控</span>
+        <span id="volumeDbText" class="text-xs text-slate-400">音量：靜音</span>
+      </div>
+
+      <!-- 即時跳動音量條 -->
+      <div class="w-full bg-slate-950 h-4 rounded-full overflow-hidden p-0.5 border border-slate-700">
+        <div id="volumeBar" class="bg-emerald-500 h-full rounded-full transition-all duration-75 w-0"></div>
+      </div>
+      <div class="text-[11px] text-slate-400 flex justify-between">
+        <span>微弱/安靜</span>
+        <span class="text-emerald-400 font-semibold">演講正常聲量</span>
+        <span class="text-rose-400">爆音</span>
+      </div>
+
+      <div class="flex gap-2 mt-2">
+        <button id="toggleBtn" onclick="toggleListening()" class="flex-1 py-3 px-4 rounded-lg font-bold flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white transition-all shadow-lg">
+          <i class="fa-solid fa-play"></i>
+          <span>開始收音聆聽</span>
         </button>
-      </div>
-      <p class="text-xs text-slate-500 dark:text-slate-400 mb-4 leading-relaxed">
-        可填寫您專屬的 Google Gemini API 金鑰啟用即時高精準演講摘要。若維持留空，系統將會以內建的智慧關鍵句萃取演算法執行單機備用語意摘要。
-      </p>
-      <div class="mb-4">
-        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Gemini API Key</label>
-        <input id="apiKeyInput" type="password" placeholder="AIzaSy..." class="w-full px-3 py-2 text-sm rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:text-white">
-      </div>
-      <div class="flex justify-end space-x-2">
-        <button id="saveApiKeyBtn" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-semibold transition shadow">
-          儲存設定
+        <button onclick="clearTranscript()" class="px-4 py-3 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-lg text-sm">
+          清空
         </button>
       </div>
     </div>
-  </div>
 
-  <!-- Custom Alert Toast Component -->
-  <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col space-y-2 pointer-events-none"></div>
+    <!-- 標籤速記 -->
+    <div class="flex gap-2 overflow-x-auto py-1">
+      <button onclick="insertTag('⭐ 重要論點')" class="bg-amber-500/20 text-amber-300 border border-amber-500/30 px-3 py-1.5 rounded-full text-xs shrink-0 hover:bg-amber-500/30">⭐ 重要論點</button>
+      <button onclick="insertTag('❓ 提問/反思')" class="bg-sky-500/20 text-sky-300 border border-sky-500/30 px-3 py-1.5 rounded-full text-xs shrink-0 hover:bg-sky-500/30">❓ 提問/反思</button>
+      <button onclick="insertTag('💡 行動點子')" class="bg-purple-500/20 text-purple-300 border border-purple-500/30 px-3 py-1.5 rounded-full text-xs shrink-0 hover:bg-purple-500/30">💡 行動點子</button>
+    </div>
 
-  <!-- Main Grid Container -->
-  <main class="flex-1 max-w-7xl w-full mx-auto p-3 sm:p-5 lg:p-6 grid grid-cols-1 lg:grid-cols-12 gap-5">
-
-    <!-- LEFT COLUMN: Live Transcription & Real-time Tagging (7 Cols) -->
-    <section class="lg:col-span-7 flex flex-col space-y-4">
-      
-      <!-- Live Control Bar -->
-      <div class="bg-white dark:bg-slate-800/90 rounded-2xl p-4 shadow-sm border border-slate-200/80 dark:border-slate-800">
-        <div class="flex flex-wrap items-center justify-between gap-3">
-          
-          <!-- Primary Recording Buttons -->
-          <div class="flex items-center space-x-2">
-            <button id="recordToggleBtn" class="flex items-center space-x-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm transition shadow-md shadow-indigo-600/30 active:scale-95">
-              <i class="fa-solid fa-microphone"></i>
-              <span id="recordBtnText">開始收音聆聽</span>
-            </button>
-            <button id="pauseBtn" disabled class="p-2.5 rounded-xl bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 font-medium text-sm transition disabled:opacity-40" title="暫停收音">
-              <i class="fa-solid fa-pause"></i>
-            </button>
-          </div>
-
-          <!-- Status badge & Audio Visualizer Pulse -->
-          <div class="flex items-center space-x-3">
-            <div id="liveAudioWave" class="hidden flex items-end space-x-1 h-6">
-              <span class="wave-bar w-1 bg-indigo-500 rounded-full h-3 animate-pulse"></span>
-              <span class="wave-bar w-1 bg-indigo-600 rounded-full h-5 animate-pulse delay-75"></span>
-              <span class="wave-bar w-1 bg-violet-500 rounded-full h-2 animate-pulse delay-150"></span>
-              <span class="wave-bar w-1 bg-indigo-500 rounded-full h-4 animate-pulse"></span>
-            </div>
-            <div id="statusBadge" class="flex items-center space-x-2 px-3 py-1 rounded-full text-xs font-semibold bg-slate-100 dark:bg-slate-700/60 text-slate-600 dark:text-slate-300">
-              <span class="w-2 h-2 rounded-full bg-slate-400"></span>
-              <span id="statusLabel">待命辨識中</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- Real-time Lecture Quick Markers -->
-        <div class="mt-4 pt-3 border-t border-slate-100 dark:border-slate-700/60 flex flex-wrap items-center gap-2">
-          <span class="text-xs font-semibold text-slate-500 dark:text-slate-400 mr-1 flex items-center">
-            <i class="fa-solid fa-bookmark mr-1"></i> 即時標籤戳印:
-          </span>
-          <button class="marker-btn inline-flex items-center space-x-1 px-3 py-1 rounded-lg text-xs font-medium bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800/60 hover:bg-amber-100 transition active:scale-95" data-tag="⭐ 重要論點">
-            <span>⭐ 重要論點</span>
-          </button>
-          <button class="marker-btn inline-flex items-center space-x-1 px-3 py-1 rounded-lg text-xs font-medium bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800/60 hover:bg-rose-100 transition active:scale-95" data-tag="❓ 待問講者">
-            <span>❓ 待問講者</span>
-          </button>
-          <button class="marker-btn inline-flex items-center space-x-1 px-3 py-1 rounded-lg text-xs font-medium bg-teal-50 dark:bg-teal-950/40 text-teal-700 dark:text-teal-300 border border-teal-200 dark:border-teal-800/60 hover:bg-teal-100 transition active:scale-95" data-tag="💡 個人靈感">
-            <span>💡 個人靈感</span>
-          </button>
-          <button class="marker-btn inline-flex items-center space-x-1 px-3 py-1 rounded-lg text-xs font-medium bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800/60 hover:bg-blue-100 transition active:scale-95" data-tag="📖 推薦書目/案例">
-            <span>📖 推薦資源</span>
-          </button>
-        </div>
+    <!-- 逐字稿顯示區 -->
+    <div class="bg-slate-800 rounded-xl p-4 border border-slate-700 flex-1 min-h-[300px] flex flex-col">
+      <div class="text-xs text-slate-400 border-b border-slate-700 pb-2 mb-3 flex justify-between">
+        <span>即時文字轉譯</span>
+        <span id="charCount">0 字</span>
       </div>
-
-      <!-- Transcript Viewer Card -->
-      <div class="bg-white dark:bg-slate-800 rounded-2xl p-4 sm:p-5 shadow-sm border border-slate-200/80 dark:border-slate-800 flex-1 flex flex-col min-h-[360px] lg:min-h-[460px]">
-        <div class="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-700">
-          <div class="flex items-center space-x-2">
-            <i class="fa-solid fa-align-left text-indigo-500"></i>
-            <h2 class="font-bold text-slate-800 dark:text-slate-100 text-sm sm:text-base">逐字記錄串流 (Live Transcript)</h2>
-          </div>
-          <div class="flex items-center space-x-2 text-xs text-slate-400">
-            <span id="charCountLabel">0 字元</span>
-            <span>•</span>
-            <button id="copyTranscriptBtn" class="hover:text-indigo-600 transition" title="複製純逐字稿">
-              <i class="fa-regular fa-copy"></i> 複製逐字
-            </button>
-          </div>
-        </div>
-
-        <!-- Transcript Feed Box -->
-        <div id="transcriptContainer" class="flex-1 overflow-y-auto space-y-3 py-3 pr-1 text-sm leading-relaxed max-h-[380px]">
-          <!-- Welcome default message -->
-          <div id="emptyPrompt" class="text-center py-12 text-slate-400 dark:text-slate-500">
-            <i class="fa-solid fa-headphones-simple text-4xl mb-3 opacity-40"></i>
-            <p class="font-medium text-sm">點選上方「開始收音聆聽」或在下方快速打字加入重點</p>
-            <p class="text-xs mt-1 text-slate-400">支援即時語音分段時間戳記、演講現場斷句與中途補記</p>
-          </div>
-        </div>
-
-        <!-- Interim recognition line (temporary speech) -->
-        <div id="interimBox" class="min-h-[28px] text-xs sm:text-sm text-indigo-600 dark:text-indigo-300 italic px-3 py-1.5 bg-indigo-50/50 dark:bg-indigo-950/30 rounded-lg border border-indigo-100/50 dark:border-indigo-900/30 flex items-center hidden">
-          <span class="inline-block w-2 h-2 rounded-full bg-indigo-500 animate-ping mr-2"></span>
-          <span id="interimText">聆聽辨識中...</span>
-        </div>
-
-        <!-- Quick Manual Note / Correction input bar -->
-        <div class="mt-3 pt-3 border-t border-slate-100 dark:border-slate-700 flex items-center space-x-2">
-          <div class="relative flex-1">
-            <input id="manualInput" type="text" placeholder="補充講者投影內容或現場手動速記 (按 Enter 送出)..." class="w-full pl-3 pr-9 py-2 text-xs sm:text-sm rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-800 dark:text-slate-100">
-            <button id="sendManualBtn" class="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-indigo-600">
-              <i class="fa-solid fa-paper-plane text-sm"></i>
-            </button>
-          </div>
-        </div>
+      <div id="transcriptBox" class="flex-1 overflow-y-auto space-y-3 text-sm leading-relaxed max-h-[45vh]">
+        <div class="text-slate-500 text-center py-10" id="placeholderTip">點擊上方「開始收音聆聽」開始記錄</div>
       </div>
-    </section>
-
-    <!-- RIGHT COLUMN: AI Smart Summarization & Key Insights (5 Cols) -->
-    <section class="lg:col-span-5 flex flex-col space-y-4">
-      
-      <!-- Summarization Controller Card -->
-      <div class="bg-white dark:bg-slate-800 rounded-2xl p-4 sm:p-5 shadow-sm border border-slate-200/80 dark:border-slate-800 flex flex-col">
-        <div class="flex items-center justify-between mb-3">
-          <div class="flex items-center space-x-2">
-            <div class="p-1.5 rounded-lg bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400">
-              <i class="fa-solid fa-wand-magic-sparkles"></i>
-            </div>
-            <h2 class="font-bold text-slate-800 dark:text-slate-100 text-sm sm:text-base">Gemini 演講智慧摘要</h2>
-          </div>
-          <span id="modelIndicator" class="text-[11px] font-mono px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-300">
-            gemini-2.5-flash
-          </span>
-        </div>
-
-        <p class="text-xs text-slate-500 dark:text-slate-400 mb-3">
-          依照演講屬性，一鍵生成具備清晰架構、條理分明的講者思想結晶與行動建議：
-        </p>
-
-        <!-- Template Buttons Grid -->
-        <div class="grid grid-cols-2 gap-2 mb-3">
-          <button data-mode="framework" class="summary-trigger-btn text-left p-2.5 rounded-xl border border-indigo-100 dark:border-indigo-950/80 bg-indigo-50/40 dark:bg-slate-700/40 hover:bg-indigo-50 dark:hover:bg-slate-700 transition group">
-            <div class="font-semibold text-xs text-indigo-950 dark:text-indigo-200 flex items-center justify-between">
-              <span>核心觀點與論述</span>
-              <i class="fa-solid fa-chevron-right text-[10px] opacity-40 group-hover:translate-x-0.5 transition"></i>
-            </div>
-            <div class="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">結構化論點演繹與因果脈絡</div>
-          </button>
-
-          <button data-mode="action" class="summary-trigger-btn text-left p-2.5 rounded-xl border border-emerald-100 dark:border-emerald-950/80 bg-emerald-50/40 dark:bg-slate-700/40 hover:bg-emerald-50 dark:hover:bg-slate-700 transition group">
-            <div class="font-semibold text-xs text-emerald-950 dark:text-emerald-200 flex items-center justify-between">
-              <span>行動方案與反思</span>
-              <i class="fa-solid fa-chevron-right text-[10px] opacity-40 group-hover:translate-x-0.5 transition"></i>
-            </div>
-            <div class="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">現場提煉可行步驟與思辨課題</div>
-          </button>
-
-          <button data-mode="executive" class="summary-trigger-btn text-left p-2.5 rounded-xl border border-amber-100 dark:border-amber-950/80 bg-amber-50/40 dark:bg-slate-700/40 hover:bg-amber-50 dark:hover:bg-slate-700 transition group">
-            <div class="font-semibold text-xs text-amber-950 dark:text-amber-200 flex items-center justify-between">
-              <span>三分鐘速讀簡報</span>
-              <i class="fa-solid fa-chevron-right text-[10px] opacity-40 group-hover:translate-x-0.5 transition"></i>
-            </div>
-            <div class="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">給忙碌主管或複習的精華條列</div>
-          </button>
-
-          <button data-mode="quotes" class="summary-trigger-btn text-left p-2.5 rounded-xl border border-purple-100 dark:border-purple-950/80 bg-purple-50/40 dark:bg-slate-700/40 hover:bg-purple-50 dark:hover:bg-slate-700 transition group">
-            <div class="font-semibold text-xs text-purple-950 dark:text-purple-200 flex items-center justify-between">
-              <span>金句與問答建議</span>
-              <i class="fa-solid fa-chevron-right text-[10px] opacity-40 group-hover:translate-x-0.5 transition"></i>
-            </div>
-            <div class="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">提煉精闢佳句與會後Q&A提問題</div>
-          </button>
-        </div>
-
-        <!-- Custom Prompt Expansion -->
-        <div class="flex items-center space-x-2">
-          <input id="customPromptInput" type="text" placeholder="或自訂要求 (例如：以五點格式整理講者對地方創生的批判)..." class="flex-1 px-3 py-1.5 text-xs rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-1 focus:ring-indigo-500 text-slate-800 dark:text-slate-200">
-          <button id="customSummarizeBtn" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-900 dark:bg-indigo-600 dark:hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold transition shrink-0">
-            生成摘要
-          </button>
-        </div>
-      </div>
-
-      <!-- AI Results Output Box -->
-      <div class="bg-white dark:bg-slate-800 rounded-2xl p-4 sm:p-5 shadow-sm border border-slate-200/80 dark:border-slate-800 flex-1 flex flex-col min-h-[300px]">
-        <div class="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-700">
-          <div class="flex items-center space-x-2">
-            <span id="summaryStatusDot" class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
-            <span class="font-bold text-xs sm:text-sm text-slate-700 dark:text-slate-200">摘要產出看板</span>
-          </div>
-          <div class="flex items-center space-x-1.5">
-            <button id="copySummaryBtn" class="p-1.5 text-slate-500 hover:text-indigo-600 text-xs rounded-md hover:bg-slate-100 dark:hover:bg-slate-700 transition" title="複製摘要內容">
-              <i class="fa-regular fa-copy"></i>
-            </button>
-            <button id="exportMdBtn" class="flex items-center space-x-1 px-2.5 py-1 text-xs font-medium rounded-lg bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 transition border border-indigo-200 dark:border-indigo-800">
-              <i class="fa-solid fa-download text-[11px]"></i>
-              <span>導出筆記 (.md)</span>
-            </button>
-          </div>
-        </div>
-
-        <!-- Content Area -->
-        <div id="summaryContent" class="flex-1 overflow-y-auto py-3 text-xs sm:text-sm text-slate-700 dark:text-slate-200 leading-relaxed whitespace-pre-line">
-          <div class="text-center py-10 text-slate-400">
-            <i class="fa-solid fa-sparkles text-3xl mb-2 opacity-30"></i>
-            <p>點選上方任一摘要模式，AI 將整合現場逐字稿與標註標籤即刻梳理精要。</p>
-          </div>
-        </div>
-
-        <!-- Summary Generation Loading Overlay -->
-        <div id="summaryLoading" class="hidden py-8 flex flex-col items-center justify-center space-y-3">
-          <div class="w-8 h-8 border-3 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div>
-          <p class="text-xs font-medium text-indigo-600 dark:text-indigo-400 animate-pulse">正在深度分析演講脈絡與提煉要點...</p>
-        </div>
-      </div>
-    </section>
+      <div id="interimText" class="text-xs text-emerald-400 italic mt-2 min-h-[1.5em]"></div>
+    </div>
   </main>
 
   <script>
-    // LectureScribe AI Application State
-    const state = {
-      isRecording: false,
-      isPaused: false,
-      recognition: null,
-      transcripts: [], // Array of { id, time, text, tag, isManual }
-      apiKey: localStorage.getItem('lecturescribe_api_key') || '',
-      language: 'zh-TW',
-      lastSavedSummary: '',
-      autoRestartTimer: null
-    };
+    let recognition = null;
+    let isListening = false;
+    let audioContext = null;
+    let analyser = null;
+    let microphoneStream = null;
+    let animFrame = null;
+    let fullTranscript = [];
 
-    // DOM Elements
-    const recordToggleBtn = document.getElementById('recordToggleBtn');
-    const recordBtnText = document.getElementById('recordBtnText');
-    const pauseBtn = document.getElementById('pauseBtn');
-    const statusBadge = document.getElementById('statusBadge');
-    const statusLabel = document.getElementById('statusLabel');
-    const liveAudioWave = document.getElementById('liveAudioWave');
-    const transcriptContainer = document.getElementById('transcriptContainer');
-    const emptyPrompt = document.getElementById('emptyPrompt');
-    const interimBox = document.getElementById('interimBox');
-    const interimText = document.getElementById('interimText');
-    const charCountLabel = document.getElementById('charCountLabel');
-    const manualInput = document.getElementById('manualInput');
-    const sendManualBtn = document.getElementById('sendManualBtn');
-    const summaryContent = document.getElementById('summaryContent');
-    const summaryLoading = document.getElementById('summaryLoading');
-    const langSelect = document.getElementById('langSelect');
-    const apiKeyInput = document.getElementById('apiKeyInput');
-    const apiModal = document.getElementById('apiModal');
-    const toastContainer = document.getElementById('toastContainer');
+    // 初始化語音辨識
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (SpeechRecognition) {
+      recognition = new SpeechRecognition();
+      recognition.continuous = true;
+      recognition.interimResults = true;
+      recognition.lang = 'zh-TW';
 
-    function initSpeechRecognition() {
-      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-      if (!SpeechRecognition) {
-        showToast('您的瀏覽器不支援 Web Speech API，請改用 Chrome 或 Edge 體驗語音即時辨識。您依然可以使用下方手動記錄。', 'warning');
-        return null;
-      }
-
-      const rec = new SpeechRecognition();
-      rec.continuous = true;
-      rec.interimResults = true;
-      rec.lang = state.language;
-
-      rec.onstart = () => {
-        state.isRecording = true;
-        updateControlsUI(true);
-      };
-
-      rec.onresult = (event) => {
+      recognition.onresult = (event) => {
         let interim = '';
         for (let i = event.resultIndex; i < event.results.length; ++i) {
-          const result = event.results[i];
-          const transcriptFragment = result[0].transcript;
-          if (result.isFinal) {
-            const cleanText = transcriptFragment.trim();
-            if (cleanText.length > 0) {
-              addTranscriptEntry(cleanText, null, false);
+          const item = event.results[i];
+          if (item.isFinal) {
+            const finalTxt = item[0].transcript.trim();
+            if (finalTxt) {
+              appendFinalText(finalTxt);
             }
           } else {
-            interim += transcriptFragment;
+            interim += item[0].transcript;
           }
         }
-
-        if (interim.trim().length > 0) {
-          interimBox.classList.remove('hidden');
-          interimText.textContent = interim;
-        } else {
-          interimBox.classList.add('hidden');
-        }
+        document.getElementById('interimText').textContent = interim ? `正在辨識：${interim}` : '';
       };
 
-      rec.onerror = (event) => {
-        console.warn('Speech Recognition Event Error:', event.error);
-        if (event.error === 'not-allowed') {
-          showToast('無法存取麥克風，請檢查瀏覽器權限設定。', 'error');
-          stopRecording();
-        } else if (event.error === 'no-speech') {
-          // Normal idle in lecture gap, keep listening
+      recognition.onerror = (e) => {
+        console.warn('Recognition error:', e.error);
+        if (e.error === 'no-speech') {
+          // 演講中停頓屬正常現象，不強制中斷
+          return;
         }
+        updateStatus('辨識異常：' + e.error, 'bg-rose-700 text-white');
       };
 
-      rec.onend = () => {
-        // Automatically restart speech recognition if session is supposed to be active
-        if (state.isRecording && !state.isPaused) {
-          try {
-            rec.start();
-          } catch (e) {
-            // Already active or throttling
+      recognition.onend = () => {
+        if (isListening) {
+          // 若非手動停止，自動重新連線以確保持續收音
+          try { recognition.start(); } catch(err) {}
+        }
+      };
+    }
+
+    // 啟動高敏度收音並監聽音量
+    async function startAudioMonitoring() {
+      try {
+        // 設定強制關閉回音與過度降噪，最大化收音敏感度
+        const audioConstraints = {
+          audio: {
+            echoCancellation: false,
+            noiseSuppression: false,
+            autoGainControl: true
           }
-        } else if (!state.isRecording) {
-          updateControlsUI(false);
-        }
-      };
-
-      return rec;
-    }
-
-    function formatCurrentTime() {
-      const now = new Date();
-      const pad = (n) => String(n).padStart(2, '0');
-      return `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
-    }
-
-    function addTranscriptEntry(text, tag = null, isManual = false) {
-      if (!text || text.trim() === '') return;
-
-      const entry = {
-        id: 'ts_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
-        time: formatCurrentTime(),
-        text: text.trim(),
-        tag: tag,
-        isManual: isManual
-      };
-
-      state.transcripts.push(entry);
-      saveToLocalStorage();
-      renderSingleEntry(entry);
-      updateTotalCharCount();
-
-      // Clear interim preview
-      interimBox.classList.add('hidden');
-      interimText.textContent = '';
-      
-      // Auto-scroll to bottom
-      transcriptContainer.scrollTop = transcriptContainer.scrollHeight;
-    }
-
-    function renderSingleEntry(entry) {
-      if (emptyPrompt) {
-        emptyPrompt.classList.add('hidden');
-      }
-
-      const row = document.createElement('div');
-      row.className = 'group p-2.5 rounded-xl transition bg-slate-50/70 hover:bg-slate-100/90 dark:bg-slate-900/40 dark:hover:bg-slate-900/80 border border-slate-200/50 dark:border-slate-700/40 flex flex-col space-y-1';
-      row.id = entry.id;
-
-      // Meta header (Time + Tag + Action)
-      const header = document.createElement('div');
-      header.className = 'flex items-center justify-between text-xs text-slate-400';
-
-      const leftMeta = document.createElement('div');
-      leftMeta.className = 'flex items-center space-x-2';
-
-      const timeBadge = document.createElement('span');
-      timeBadge.className = 'font-mono text-[11px] text-slate-500 dark:text-slate-400';
-      timeBadge.textContent = `[${entry.time}]`;
-      leftMeta.appendChild(timeBadge);
-
-      if (entry.tag) {
-        const tagBadge = document.createElement('span');
-        tagBadge.className = 'px-1.5 py-0.5 rounded text-[10px] font-semibold bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300';
-        tagBadge.textContent = entry.tag;
-        leftMeta.appendChild(tagBadge);
-      }
-
-      if (entry.isManual) {
-        const manualBadge = document.createElement('span');
-        manualBadge.className = 'px-1 py-0.2 rounded text-[9px] bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300';
-        manualBadge.textContent = '手動輸入';
-        leftMeta.appendChild(manualBadge);
-      }
-
-      header.appendChild(leftMeta);
-
-      // Actions (Delete entry / Quick re-tag)
-      const actions = document.createElement('div');
-      actions.className = 'opacity-0 group-hover:opacity-100 transition flex items-center space-x-2';
-      
-      const delBtn = document.createElement('button');
-      delBtn.className = 'hover:text-rose-500';
-      delBtn.innerHTML = '<i class="fa-solid fa-trash-can text-[11px]"></i>';
-      delBtn.onclick = () => removeEntry(entry.id);
-      actions.appendChild(delBtn);
-
-      header.appendChild(actions);
-      row.appendChild(header);
-
-      // Text body (editable on click)
-      const content = document.createElement('div');
-      content.className = 'text-slate-800 dark:text-slate-100 text-xs sm:text-sm leading-relaxed focus:outline-none focus:bg-white dark:focus:bg-slate-800 rounded px-1';
-      content.contentEditable = 'true';
-      content.textContent = entry.text;
-      content.onblur = () => {
-        entry.text = content.textContent.trim();
-        saveToLocalStorage();
-        updateTotalCharCount();
-      };
-      row.appendChild(content);
-
-      transcriptContainer.appendChild(row);
-    }
-
-    function removeEntry(id) {
-      state.transcripts = state.transcripts.filter(item => item.id !== id);
-      const el = document.getElementById(id);
-      if (el) el.remove();
-      saveToLocalStorage();
-      updateTotalCharCount();
-      if (state.transcripts.length === 0 && emptyPrompt) {
-        emptyPrompt.classList.remove('hidden');
-      }
-    }
-
-    function updateTotalCharCount() {
-      const count = state.transcripts.reduce((acc, item) => acc + item.text.length, 0);
-      charCountLabel.textContent = `${count} 字元`;
-    }
-
-    function startRecording() {
-      if (!state.recognition) {
-        state.recognition = initSpeechRecognition();
-      }
-      if (!state.recognition) return;
-
-      try {
-        state.recognition.lang = state.language;
-        state.recognition.start();
-        state.isRecording = true;
-        state.isPaused = false;
-        updateControlsUI(true);
-        showToast('已開始聆聽演講語音...', 'info');
-      } catch (err) {
-        console.warn('Recognition start exception:', err);
-      }
-    }
-
-    function pauseRecording() {
-      if (!state.isRecording) return;
-      if (!state.isPaused) {
-        state.isPaused = true;
-        if (state.recognition) state.recognition.stop();
-        statusLabel.textContent = '收音暫停中';
-        statusBadge.className = 'flex items-center space-x-2 px-3 py-1 rounded-full text-xs font-semibold bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300';
-        liveAudioWave.classList.add('hidden');
-        pauseBtn.innerHTML = '<i class="fa-solid fa-play"></i>';
-        showToast('已暫停收音', 'info');
-      } else {
-        state.isPaused = false;
-        if (state.recognition) state.recognition.start();
-        updateControlsUI(true);
-        pauseBtn.innerHTML = '<i class="fa-solid fa-pause"></i>';
-        showToast('已繼續收音', 'info');
-      }
-    }
-
-    function stopRecording() {
-      state.isRecording = false;
-      state.isPaused = false;
-      if (state.recognition) {
-        try {
-          state.recognition.stop();
-        } catch (e) {}
-      }
-      updateControlsUI(false);
-      showToast('已停止收音辨識', 'info');
-    }
-
-    function updateControlsUI(active) {
-      if (active) {
-        recordToggleBtn.classList.remove('bg-indigo-600', 'hover:bg-indigo-700');
-        recordToggleBtn.classList.add('bg-rose-600', 'hover:bg-rose-700');
-        recordBtnText.textContent = '停止辨識';
-        pauseBtn.disabled = false;
-        liveAudioWave.classList.remove('hidden');
-        statusBadge.className = 'flex items-center space-x-2 px-3 py-1 rounded-full text-xs font-semibold bg-indigo-100 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 animate-pulse';
-        statusLabel.textContent = '即時聆聽辨識中';
-      } else {
-        recordToggleBtn.classList.remove('bg-rose-600', 'hover:bg-rose-700');
-        recordToggleBtn.classList.add('bg-indigo-600', 'hover:bg-indigo-700');
-        recordBtnText.textContent = '開始收音聆聽';
-        pauseBtn.disabled = true;
-        pauseBtn.innerHTML = '<i class="fa-solid fa-pause"></i>';
-        liveAudioWave.classList.add('hidden');
-        statusBadge.className = 'flex items-center space-x-2 px-3 py-1 rounded-full text-xs font-semibold bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300';
-        statusLabel.textContent = '待命辨識中';
-      }
-    }
-
-    async function generateAiSummary(mode, customInstruction = '') {
-      const fullText = state.transcripts.map(t => `[${t.time}] ${t.tag ? `[${t.tag}] ` : ''}${t.text}`).join('\n');
-      
-      if (!fullText.trim()) {
-        showToast('目前尚無記錄內容，請先開始辨識或打字輸入。', 'warning');
-        return;
-      }
-
-      summaryContent.classList.add('hidden');
-      summaryLoading.classList.remove('hidden');
-
-      let systemPrompt = `你是一位精通學術演講、論壇研討會與深層USR地方創生議題的專業演講筆記紀錄專家。
-請使用道地清晰的臺灣繁體中文 (Traditional Chinese, Taiwan) 進行組織整理。
-輸出格式必須具備明確結構、使用 Markdown 排版，風格客觀、有洞見且實用。`;
-
-      let userPrompt = '';
-
-      switch (mode) {
-        case 'framework':
-          userPrompt = `以下為演講的逐字與標籤紀錄。請為我整理出【核心觀點與論述架構】：
-1. 演講主軸定位（1~2 句話貫穿）
-2. 講者的核心論點演繹（按照因果脈絡與層次梳理）
-3. 講者提出的關鍵破除盲點（過去大家的誤區 vs. 講者的主張）
-4. 演講提到的具體論證與案件事例
-
-演講紀錄如下：
-${fullText}`;
-          break;
-
-        case 'action':
-          userPrompt = `請分析以下演講紀錄，提煉出【行動方案與反思啟發】：
-1. 聽眾/相關實踐者可落地的 3~4 項具體行動指南（可操作、可驗證）
-2. 講者引導的深層反思課題（包含心智模式、倫理責任與系統思考）
-3. 潛在瓶頸與因應對策
-
-演講紀錄如下：
-${fullText}`;
-          break;
-
-        case 'executive':
-          userPrompt = `請將以下演講內容濃縮為【三分鐘速讀簡報】：
-- 🎯 一句話精髓摘要
-- 💡 3 大關鍵 takeaways（重點摘錄）
-- 🚀 最值得關注的結論與趨勢預測
-
-演講紀錄如下：
-${fullText}`;
-          break;
-
-        case 'quotes':
-          userPrompt = `請針對以下演講內容提煉【精華金句與會後提問清單】：
-1. 演講中最具震撼力或啟發性的 2~4 句講者原意金句（以精練字句呈現）
-2. 會後 Q&A 環節推薦提問的 3 個高品質問題（針對論述痛點、延伸落地或批判性視角）
-
-演講紀錄如下：
-${fullText}`;
-          break;
-
-        case 'custom':
-          userPrompt = `請針對以下演講紀錄，根據特定指示：【${customInstruction}】進行精準整理。\n\n演講紀錄如下：\n${fullText}`;
-          break;
-      }
-
-      // If user has provided custom Gemini API Key or we make request
-      if (state.apiKey && state.apiKey.trim() !== '') {
-        try {
-          const resultText = await callGeminiApi(systemPrompt, userPrompt, state.apiKey);
-          renderSummaryResult(resultText);
-          showToast('AI 摘要已即時生成！', 'success');
-        } catch (err) {
-          console.error('Gemini API Error:', err);
-          showToast('Gemini API 請求失敗，轉由內建語意摘要演算法處理。', 'warning');
-          fallbackSummarize(mode, fullText);
-        }
-      } else {
-        // Run smart local structured synthesizer fallback
-        setTimeout(() => {
-          fallbackSummarize(mode, fullText);
-          showToast('已透過本地演算法生成架構摘要（可於右上角配置 Gemini Key 體驗頂級推理）', 'info');
-        }, 600);
-      }
-    }
-
-    async function callGeminiApi(systemPrompt, userPrompt, apiKey) {
-      const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
-      const payload = {
-        contents: [{ parts: [{ text: userPrompt }] }],
-        systemInstruction: { parts: [{ text: systemPrompt }] },
-        generationConfig: {
-          temperature: 0.3,
-          maxOutputTokens: 2048
-        }
-      };
-
-      const response = await fetch(apiUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
-      }
-
-      const data = await response.json();
-      return data.candidates?.[0]?.content?.parts?.[0]?.text || '未能解析出有效文字。';
-    }
-
-    function fallbackSummarize(mode, fullText) {
-      summaryLoading.classList.add('hidden');
-      summaryContent.classList.remove('hidden');
-
-      const sentences = state.transcripts.map(t => t.text);
-      const starred = state.transcripts.filter(t => t.tag && t.tag.includes('重要'));
-      const questions = state.transcripts.filter(t => t.tag && t.tag.includes('問'));
-      const insights = state.transcripts.filter(t => t.tag && t.tag.includes('靈感'));
-
-      let output = '';
-      if (mode === 'framework') {
-        output = `### 📌 演講核心觀點與論述架構 (本機結構整理)\n\n` +
-          `**一、 主要紀錄脈絡：**\n` +
-          `本場演講共收錄 ${state.transcripts.length} 條發言片段（涵蓋時間 ${state.transcripts[0]?.time || '--'} ~ ${state.transcripts[state.transcripts.length-1]?.time || '--'}）。\n\n` +
-          `**二、 現場標記之核心重點：**\n` +
-          (starred.length > 0 
-            ? starred.map((s, idx) => `${idx + 1}. [${s.time}] **${s.text}**`).join('\n')
-            : `1. ${sentences.slice(0, 3).join('；')}\n2. ${sentences.slice(3, 6).join('；') || '現場論述持續推進中。'}`) +
-          `\n\n**三、 觀察與論點關聯：**\n` +
-          `- 講者強調現象背後的系統結構，跳脫表象問題。\n- 強調長期動能與夥伴互惠的重要性。`;
-      } else if (mode === 'action') {
-        output = `### 🚀 行動方案與反思啟發\n\n` +
-          `**具體實踐建議：**\n` +
-          `1. **深化現場沉浸：** 避免短暫過客心態，建立長期夥伴互信。\n` +
-          `2. **雙向能力賦能：** 評估所提方案是否讓在地夥伴具備自主持續運作的能力。\n` +
-          `3. **驗證與迭代：** 針對現場紀錄中提及的瓶頸擬定小步快跑的驗證指標。\n\n` +
-          `**提問與思索清單：**\n` +
-          (questions.length > 0 ? questions.map(q => `- ❓ [${q.time}] ${q.text}`).join('\n') : `- 思考自身專業如何真正融入真實場域需求？`);
-      } else if (mode === 'quotes') {
-        output = `### 💎 精華金句與提問建議\n\n` +
-          `**演講精選觀點摘錄：**\n` +
-          (insights.length > 0 
-            ? insights.map(i => `> 「${i.text}」\n> — *記錄於 ${i.time}*`).join('\n\n') 
-            : `> 「做事情的關鍵不在於完成了什麼產物，而是留下了什麼自我運轉的關係與機制。」\n\n> 「走出拯救者姿態，才能看見地方最真實的呼吸與韌性。」`) +
-          `\n\n**推薦會後交流發問：**\n` +
-          `1. 講者在實踐該論點時，初期遭遇的最大阻力為何？如何化解？\n` +
-          `2. 若資源或人力有限，優先啟動的第一步該如何取捨？`;
-      } else {
-        output = `### ⚡ 三分鐘速讀摘要\n\n` +
-          `**總結概覽：** 本次講座重點圍繞於真實價值之深耕，批判流於表面之產出，鼓勵深層參與。\n\n` +
-          `**關鍵摘要：**\n` +
-          sentences.slice(-5).map(s => `- ${s}`).join('\n');
-      }
-
-      renderSummaryResult(output);
-    }
-
-    function renderSummaryResult(markdownText) {
-      summaryLoading.classList.add('hidden');
-      summaryContent.classList.remove('hidden');
-      state.lastSavedSummary = markdownText;
-      
-      // Simple custom markdown renderer for clean display
-      let html = markdownText
-        .replace(/^### (.*$)/gim, '<h3 class="text-sm font-bold text-indigo-900 dark:text-indigo-300 mt-3 mb-1.5 pb-1 border-b border-indigo-100 dark:border-indigo-900">$1</h3>')
-        .replace(/^## (.*$)/gim, '<h2 class="text-base font-bold text-slate-800 dark:text-slate-100 mt-3 mb-1.5">$1</h2>')
-        .replace(/\*\*(.*?)\*\*/gim, '<strong class="font-semibold text-slate-900 dark:text-white">$1</strong>')
-        .replace(/\*(.*?)\*/gim, '<em class="text-slate-600 dark:text-slate-300">$1</em>')
-        .replace(/^> (.*$)/gim, '<blockquote class="border-l-4 border-indigo-400 pl-3 py-1 my-2 bg-indigo-50/40 dark:bg-slate-700/40 rounded-r text-xs italic text-slate-700 dark:text-slate-200">$1</blockquote>')
-        .replace(/^- (.*$)/gim, '<li class="ml-4 list-disc text-xs my-0.5">$1</li>');
-
-      summaryContent.innerHTML = html;
-      saveToLocalStorage();
-    }
-
-    function saveToLocalStorage() {
-      localStorage.setItem('lecturescribe_transcripts', JSON.stringify(state.transcripts));
-      localStorage.setItem('lecturescribe_summary', state.lastSavedSummary);
-    }
-
-    function loadFromLocalStorage() {
-      const savedTrans = localStorage.getItem('lecturescribe_transcripts');
-      const savedSum = localStorage.getItem('lecturescribe_summary');
-
-      if (savedTrans) {
-        try {
-          state.transcripts = JSON.parse(savedTrans);
-          transcriptContainer.innerHTML = '';
-          state.transcripts.forEach(entry => renderSingleEntry(entry));
-          updateTotalCharCount();
-        } catch (e) {}
-      }
-
-      if (savedSum) {
-        state.lastSavedSummary = savedSum;
-        renderSummaryResult(savedSum);
-      }
-    }
-
-    function exportMarkdownFile() {
-      if (state.transcripts.length === 0 && !state.lastSavedSummary) {
-        showToast('目前尚無內容可供導出。', 'warning');
-        return;
-      }
-
-      const dateStr = new Date().toISOString().split('T')[0];
-      let md = `# 演講精華筆記 (${dateStr})\n`;
-      md += `*記錄工具：LectureScribe AI 智慧摘要助理*\n\n`;
-
-      if (state.lastSavedSummary) {
-        md += `## 🧠 演講結構化摘要\n\n${state.lastSavedSummary}\n\n---\n\n`;
-      }
-
-      md += `## 📝 即時逐字記錄與標記時間軸\n\n`;
-      state.transcripts.forEach(t => {
-        const tagText = t.tag ? ` **[${t.tag}]**` : '';
-        md += `- \`[${t.time}]\`${tagText} ${t.text}\n`;
-      });
-
-      const blob = new Blob([md], { type: 'text/markdown;charset=utf-8' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `LectureNotes_${dateStr}.md`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-      showToast('Markdown 筆記檔下載成功！', 'success');
-    }
-
-    function copyToClipboard(text, successMsg) {
-      const tempTextArea = document.createElement('textarea');
-      tempTextArea.value = text;
-      document.body.appendChild(tempTextArea);
-      tempTextArea.select();
-      try {
-        document.execCommand('copy');
-        showToast(successMsg, 'success');
-      } catch (err) {
-        showToast('複製失敗，請手動圈選複製。', 'error');
-      }
-      document.body.removeChild(tempTextArea);
-    }
-
-    function showToast(message, type = 'info') {
-      const toast = document.createElement('div');
-      const colors = {
-        success: 'bg-emerald-600 text-white',
-        warning: 'bg-amber-600 text-white',
-        error: 'bg-rose-600 text-white',
-        info: 'bg-slate-800 text-white dark:bg-indigo-600'
-      };
-
-      toast.className = `pointer-events-auto px-4 py-2.5 rounded-xl shadow-lg text-xs font-medium flex items-center space-x-2 transition-all transform duration-300 translate-y-2 opacity-0 ${colors[type] || colors.info}`;
-      toast.innerHTML = `<span>${message}</span>`;
-      
-      toastContainer.appendChild(toast);
-      
-      // Trigger animation
-      setTimeout(() => {
-        toast.classList.remove('translate-y-2', 'opacity-0');
-      }, 20);
-
-      setTimeout(() => {
-        toast.classList.add('opacity-0', 'translate-y-2');
-        setTimeout(() => toast.remove(), 300);
-      }, 3200);
-    }
-
-    window.addEventListener('DOMContentLoaded', () => {
-      loadFromLocalStorage();
-
-      // Audio toggles
-      recordToggleBtn.addEventListener('click', () => {
-        if (!state.isRecording) {
-          startRecording();
-        } else {
-          stopRecording();
-        }
-      });
-
-      pauseBtn.addEventListener('click', () => {
-        pauseRecording();
-      });
-
-      // Quick Marker buttons
-      document.querySelectorAll('.marker-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-          const tag = btn.getAttribute('data-tag');
-          const lastEntry = state.transcripts[state.transcripts.length - 1];
-          // If speech is currently recognized, tag the recent entry or prompt new mark
-          if (lastEntry && (Date.now() - parseInt(lastEntry.id.split('_')[1])) < 6000) {
-            lastEntry.tag = tag;
-            saveToLocalStorage();
-            transcriptContainer.innerHTML = '';
-            state.transcripts.forEach(e => renderSingleEntry(e));
-            showToast(`已替最近的一段演講附加標籤：${tag}`, 'success');
+        };
+
+        microphoneStream = await navigator.mediaDevices.getUserMedia(audioConstraints);
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        const source = audioContext.createMediaStreamSource(microphoneStream);
+        analyser = audioContext.createAnalyser();
+        analyser.fftSize = 256;
+        source.connect(analyser);
+
+        const dataArray = new Uint8Array(analyser.frequencyBinCount);
+        const volumeBar = document.getElementById('volumeBar');
+        const volumeDbText = document.getElementById('volumeDbText');
+
+        function checkVolume() {
+          if (!isListening) return;
+          analyser.getByteFrequencyData(dataArray);
+          let sum = 0;
+          for (let i = 0; i < dataArray.length; i++) {
+            sum += dataArray[i];
+          }
+          let average = sum / dataArray.length;
+          // 計算音量百分比 (放大倍率以利觀察微弱訊號)
+          let pct = Math.min(100, Math.round((average / 128) * 100 * 2.5));
+          volumeBar.style.width = pct + '%';
+
+          if (pct > 60) {
+            volumeBar.className = 'bg-rose-500 h-full rounded-full transition-all duration-75';
+            volumeDbText.textContent = `收音狀態：良好 (${pct}%)`;
+          } else if (pct > 15) {
+            volumeBar.className = 'bg-emerald-500 h-full rounded-full transition-all duration-75';
+            volumeDbText.textContent = `收音狀態：正常 (${pct}%)`;
           } else {
-            addTranscriptEntry(`【演講標註】講者在此強調重要觀點`, tag, true);
-            showToast(`已插入時間戳記標籤：${tag}`, 'success');
+            volumeBar.className = 'bg-amber-500 h-full rounded-full transition-all duration-75';
+            volumeDbText.textContent = `收音微弱/環境安靜 (${pct}%)`;
           }
-        });
-      });
 
-      // Manual Note Submission
-      const handleManualSend = () => {
-        const val = manualInput.value.trim();
-        if (val) {
-          addTranscriptEntry(val, null, true);
-          manualInput.value = '';
+          animFrame = requestAnimationFrame(checkVolume);
         }
-      };
-
-      sendManualBtn.addEventListener('click', handleManualSend);
-      manualInput.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') {
-          handleManualSend();
-        }
-      });
-
-      // Template Summarization buttons
-      document.querySelectorAll('.summary-trigger-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-          const mode = btn.getAttribute('data-mode');
-          generateAiSummary(mode);
-        });
-      });
-
-      document.getElementById('customSummarizeBtn').addEventListener('click', () => {
-        const query = document.getElementById('customPromptInput').value.trim();
-        if (query) {
-          generateAiSummary('custom', query);
-        } else {
-          showToast('請先輸入您想特定分析的面向。', 'warning');
-        }
-      });
-
-      // Clipboard & Export triggers
-      document.getElementById('copyTranscriptBtn').addEventListener('click', () => {
-        const plainText = state.transcripts.map(t => `[${t.time}] ${t.text}`).join('\n');
-        if (!plainText) {
-          showToast('尚無逐字稿可供複製。', 'warning');
-          return;
-        }
-        copyToClipboard(plainText, '逐字稿全文已複製到剪貼簿！');
-      });
-
-      document.getElementById('copySummaryBtn').addEventListener('click', () => {
-        if (!state.lastSavedSummary) {
-          showToast('尚未生成摘要內容。', 'warning');
-          return;
-        }
-        copyToClipboard(state.lastSavedSummary, 'AI 摘要內容已複製！');
-      });
-
-      document.getElementById('exportMdBtn').addEventListener('click', exportMarkdownFile);
-
-      // Session Clear Modal
-      document.getElementById('resetBtn').addEventListener('click', () => {
-        if (state.transcripts.length === 0) return;
-        state.transcripts = [];
-        state.lastSavedSummary = '';
-        saveToLocalStorage();
-        transcriptContainer.innerHTML = '';
-        if (emptyPrompt) emptyPrompt.classList.remove('hidden');
-        summaryContent.innerHTML = `<div class="text-center py-10 text-slate-400">
-          <i class="fa-solid fa-sparkles text-3xl mb-2 opacity-30"></i>
-          <p>演講紀錄已重置。請重新開始收音或打字。</p>
-        </div>`;
-        updateTotalCharCount();
-        showToast('演講記錄與摘要已全部清空。', 'info');
-      });
-
-      // Language Switcher
-      langSelect.addEventListener('change', (e) => {
-        state.language = e.target.value;
-        if (state.recognition && state.isRecording) {
-          state.recognition.stop();
-          setTimeout(() => state.recognition.start(), 300);
-        }
-        showToast(`辨識語言已切換為：${e.target.options[e.target.selectedIndex].text}`, 'info');
-      });
-
-      // Settings Modal triggers
-      const openModalBtn = document.getElementById('openApiModalBtn');
-      const closeModalBtn = document.getElementById('closeApiModalBtn');
-      const saveApiKeyBtn = document.getElementById('saveApiKeyBtn');
-
-      openModalBtn.addEventListener('click', () => {
-        apiKeyInput.value = state.apiKey;
-        apiModal.classList.remove('hidden');
-      });
-
-      closeModalBtn.addEventListener('click', () => {
-        apiModal.classList.add('hidden');
-      });
-
-      saveApiKeyBtn.addEventListener('click', () => {
-        state.apiKey = apiKeyInput.value.trim();
-        localStorage.setItem('lecturescribe_api_key', state.apiKey);
-        apiModal.classList.add('hidden');
-        showToast('Gemini API 設定已儲存！', 'success');
-      });
-
-      // Theme toggle
-      const themeToggleBtn = document.getElementById('themeToggleBtn');
-      themeToggleBtn.addEventListener('click', () => {
-        document.documentElement.classList.toggle('dark');
-        const isDark = document.documentElement.classList.contains('dark');
-        localStorage.setItem('lecturescribe_theme', isDark ? 'dark' : 'light');
-      });
-
-      if (localStorage.getItem('lecturescribe_theme') === 'dark' || (!('lecturescribe_theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-        document.documentElement.classList.add('dark');
+        checkVolume();
+      } catch (err) {
+        console.error('無法啟動麥克風監測:', err);
       }
-    });
+    }
+
+    function stopAudioMonitoring() {
+      if (animFrame) cancelAnimationFrame(animFrame);
+      if (microphoneStream) {
+        microphoneStream.getTracks().forEach(t => t.stop());
+        microphoneStream = null;
+      }
+      if (audioContext && audioContext.state !== 'closed') {
+        audioContext.close();
+      }
+      document.getElementById('volumeBar').style.width = '0%';
+      document.getElementById('volumeDbText').textContent = '音量：已停止';
+    }
+
+    async function toggleListening() {
+      if (!SpeechRecognition) {
+        alert('您的瀏覽器不支援 Web Speech API，建議使用 Android Chrome 開啟。');
+        return;
+      }
+
+      const btn = document.getElementById('toggleBtn');
+      if (!isListening) {
+        try {
+          await startAudioMonitoring();
+          recognition.start();
+          isListening = true;
+          btn.innerHTML = '<i class="fa-solid fa-stop"></i><span>停止記錄</span>';
+          btn.className = 'flex-1 py-3 px-4 rounded-lg font-bold flex items-center justify-center gap-2 bg-rose-600 hover:bg-rose-500 text-white transition-all shadow-lg pulse-ring';
+          updateStatus('收音中', 'bg-emerald-600 text-white');
+        } catch (err) {
+          alert('請允許麥克風使用權限以進行收音');
+        }
+      } else {
+        isListening = false;
+        recognition.stop();
+        stopAudioMonitoring();
+        btn.innerHTML = '<i class="fa-solid fa-play"></i><span>繼續收音聆聽</span>';
+        btn.className = 'flex-1 py-3 px-4 rounded-lg font-bold flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white transition-all shadow-lg';
+        updateStatus('已暫停', 'bg-slate-700 text-slate-300');
+        document.getElementById('interimText').textContent = '';
+      }
+    }
+
+    function appendFinalText(text) {
+      document.getElementById('placeholderTip')?.remove();
+      const box = document.getElementById('transcriptBox');
+      const now = new Date();
+      const timeStr = now.toTimeString().split(' ')[0];
+
+      const item = document.createElement('div');
+      item.className = 'bg-slate-950/60 p-2.5 rounded-lg border border-slate-700/60';
+      item.innerHTML = `<span class="text-xs text-slate-400 font-mono select-none mr-2">[${timeStr}]</span><span>${text}</span>`;
+      box.appendChild(item);
+      box.scrollTop = box.scrollHeight;
+
+      fullTranscript.push(`[${timeStr}] ${text}`);
+      updateCharCount();
+    }
+
+    function insertTag(tagName) {
+      appendFinalText(`【標記：${tagName}】`);
+    }
+
+    function clearTranscript() {
+      if (!confirm('確定要清空目前所有內容嗎？')) return;
+      document.getElementById('transcriptBox').innerHTML = '<div class="text-slate-500 text-center py-10" id="placeholderTip">點擊上方「開始收音聆聽」開始記錄</div>';
+      fullTranscript = [];
+      updateCharCount();
+    }
+
+    function updateCharCount() {
+      const len = fullTranscript.join('').length;
+      document.getElementById('charCount').textContent = `${len} 字`;
+    }
+
+    function updateStatus(text, cls) {
+      const st = document.getElementById('micStatus');
+      st.textContent = text;
+      st.className = `text-xs px-2 py-1 rounded font-medium ${cls}`;
+    }
   </script>
 </body>
 </html>
